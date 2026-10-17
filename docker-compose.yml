@@ -1,0 +1,12 @@
+services:
+  perpustakaan:
+    build: .
+    container_name: perpustakaan-aksara
+    restart: unless-stopped
+    ports:
+      - "8080:5000"
+    volumes:
+      - data-perpustakaan:/data   # supaya data tidak hilang saat container dibuat ulang
+
+volumes:
+  data-perpustakaan:
