@@ -144,7 +144,7 @@ export default function App() {
       </main>
 
       <footer className="kaki">
-        <div className="wadah">Perpustakaan Aksara, tugas Cloud Computing. React.js, Node.js, dan penyimpanan JSON.</div>
+        <div className="wadah">Perpustakaan Aksara</div>
       </footer>
 
       {bukuDetail && !pinjam && (
