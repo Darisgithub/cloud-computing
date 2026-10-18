@@ -22,7 +22,7 @@ async function api(metode, alamat, body) {
 }
 
 before(async () => {
-  proses = spawn(process.execPath, ["app.js"], {
+  proses = spawn(process.execPath, ["core.js"], {
     cwd: DIR,
     env: { ...process.env, PORT: String(PORT), TEST_MODE: "memory", PUBLIC_DIR: "/tidak-ada" },
     stdio: "ignore",

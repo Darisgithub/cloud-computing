@@ -1,1 +1,1 @@
-export { handler as default } from "../app.js";
+export { handler as default } from "../core.js";

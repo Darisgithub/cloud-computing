@@ -8,8 +8,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "node app.js",
-    "dev": "node --watch app.js",
+    "start": "node core.js",
+    "dev": "node --watch core.js",
     "test": "node --test"
   },
   "dependencies": {
