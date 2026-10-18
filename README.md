@@ -153,31 +153,6 @@ Contoh body `POST /api/peminjaman`:
 
 Kategori yang valid: Fiksi, Pengembangan Diri, Sejarah, Sains & Teknologi, Anak & Remaja, Referensi.
 
-## Deploy backend dan frontend di Vercel
-
-Deploy sebagai **dua project Vercel** dari repository yang sama agar backend dan frontend memiliki URL masing-masing.
-
-### 1. Deploy backend
-
-1. Di Vercel, pilih **Add New → Project**, impor repository GitHub.
-2. Atur **Root Directory** ke `backend`. Vercel akan mengenali function `api/[...path].js`.
-3. Pada **Settings → Environment Variables**, tambahkan:
-   - `DATABASE_URL`: connection string **Transaction pooler** dari Supabase.
-   - `SUPABASE_CA_CERT_BASE64`: sertifikat root Supabase dalam Base64 satu baris.
-   - `TZ`: `Asia/Jakarta` (opsional).
-4. Deploy, lalu verifikasi `https://<nama-backend>.vercel.app/api/health` memberikan `{"status":"ok"}`.
-
-### 2. Deploy frontend
-
-1. Tambahkan project Vercel lain yang memakai repository yang sama.
-2. Atur **Root Directory** ke `frontend`; framework **Vite** dan build command `npm run build` (output directory `dist`).
-3. URL backend production sudah diatur di `frontend/.env.production`, yang dibaca Vite saat build dan ikut terdeploy bersama frontend. Jika URL backend berubah, perbarui file itu atau set `VITE_API_URL` pada **Settings → Environment Variables** di project frontend.
-4. Deploy atau redeploy frontend.
-
-`DATABASE_URL` adalah rahasia backend dan **tidak boleh** diberi awalan `VITE_`. Hanya URL backend publik yang dimasukkan ke `VITE_API_URL`.
-
-**Catatan keamanan dan skala:** API saat ini belum memiliki autentikasi, jadi siapa pun yang dapat menjangkau URL backend dapat mengubah data. Backend juga memuat seluruh tabel ke memori proses dan menulis ulang snapshot saat ada perubahan; Vercel serverless cocok untuk demo/penggunaan ringan, bukan beban multi-user atau data sensitif.
-
 ## Menjalankan dengan Docker
 
 Docker tetap dapat dipakai untuk menjalankan backend dan frontend dalam satu container. Pastikan `DATABASE_URL` tersedia saat container dijalankan:
