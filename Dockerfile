@@ -18,4 +18,4 @@ RUN npm ci --omit=dev
 COPY backend/ ./
 COPY --from=build /app/frontend/dist ./public
 EXPOSE 5000
-CMD ["node", "server.js"]
+CMD ["node", "app.js"]

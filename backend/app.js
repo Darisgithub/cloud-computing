@@ -1,5 +1,4 @@
-// Server HTTP perpustakaan, hanya memakai modul bawaan Node.js.
-//
+
 //  BUKU
 //   GET    /api/buku?q=&kategori=      daftar buku (Read)
 //   GET    /api/buku/:id               satu buku (Read)

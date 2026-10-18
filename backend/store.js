@@ -38,11 +38,9 @@ async function muatSupabase() {
       throw new Error("Tabel Supabase belum siap. Jalankan backend/schema.sql di Supabase SQL Editor.");
     }
 
-    const [buku, anggota, peminjaman] = await Promise.all([
-      client.query("SELECT * FROM buku ORDER BY id"),
-      client.query("SELECT * FROM anggota ORDER BY id"),
-      client.query("SELECT * FROM peminjaman ORDER BY id"),
-    ]);
+    const buku = await client.query("SELECT * FROM buku ORDER BY id");
+    const anggota = await client.query("SELECT * FROM anggota ORDER BY id");
+    const peminjaman = await client.query("SELECT * FROM peminjaman ORDER BY id");
 
     if (!metadata.rows[0].initialized) {
       db = seed();
