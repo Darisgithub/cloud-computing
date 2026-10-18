@@ -33,7 +33,7 @@ Aturan perpustakaan yang dijalankan backend:
 ```
 perpustakaan/
 ├── backend/
-│   ├── core.js          # server HTTP dan daftar rute API
+│   ├── core.js          # handler server dan daftar rute API
 │   ├── service.js       # aturan perpustakaan dan logika CRUD
 │   ├── store.js         # koneksi Supabase PostgreSQL
 │   ├── api/             # entry point serverless untuk Vercel

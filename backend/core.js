@@ -203,6 +203,8 @@ export async function handler(req, res) {
   }
 }
 
+export default handler;
+
 await initStore();
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const server = http.createServer(handler);

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "REST API perpustakaan dengan penyimpanan Supabase PostgreSQL",
+  "main": "core.js",
   "engines": {
     "node": ">=18"
   },
