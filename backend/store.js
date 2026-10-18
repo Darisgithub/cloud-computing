@@ -1,40 +1,31 @@
-// Gunakan Supabase PostgreSQL jika DATABASE_URL tersedia; selain itu gunakan file JSON.
-
-import fs from "node:fs";
-import path from "node:path";
+// Penyimpanan aplikasi selalu menggunakan Supabase PostgreSQL.
 import pg from "pg";
 import { seed } from "./seed.js";
 
-export const FILE_DATA =
-  process.env.DATA_FILE || path.join(process.cwd(), "data", "perpustakaan.json");
-
 const { Pool } = pg;
+const modeUji = process.env.TEST_MODE === "memory";
+const caCertBase64 = process.env.SUPABASE_CA_CERT_BASE64;
+const caCert = caCertBase64 ? Buffer.from(caCertBase64, "base64").toString("utf8") : null;
+
+if (!modeUji && process.env.DATABASE_URL && !caCert) {
+  throw new Error(
+    "SUPABASE_CA_CERT_BASE64 wajib diatur. Unduh sertifikat root database dari Supabase, encode ke Base64, lalu tambahkan sebagai environment variable."
+  );
+}
+if (caCert && !caCert.includes("-----BEGIN CERTIFICATE-----")) {
+  throw new Error("SUPABASE_CA_CERT_BASE64 bukan sertifikat PEM yang valid setelah di-decode.");
+}
+
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: true },
+      ssl: { ca: caCert, rejectUnauthorized: true },
+      max: process.env.VERCEL ? 1 : 10,
     })
   : null;
 
 let db;
 let antrianSimpan = Promise.resolve();
-
-function muatFile() {
-  if (!fs.existsSync(FILE_DATA)) {
-    db = seed();
-    simpanFile();
-    return;
-  }
-  // Kalau file ada tapi rusak, biarkan error muncul supaya data tidak tertimpa diam-diam.
-  db = JSON.parse(fs.readFileSync(FILE_DATA, "utf8"));
-}
-
-function simpanFile() {
-  fs.mkdirSync(path.dirname(FILE_DATA), { recursive: true });
-  const sementara = `${FILE_DATA}.tmp`;
-  fs.writeFileSync(sementara, JSON.stringify(db, null, 2));
-  fs.renameSync(sementara, FILE_DATA);
-}
 
 async function muatSupabase() {
   const client = await pool.connect();
@@ -115,11 +106,14 @@ async function tulisSupabase(client) {
 }
 
 export async function initStore() {
-  if (pool) {
-    await muatSupabase();
+  if (modeUji) {
+    db = seed();
     return;
   }
-  muatFile();
+  if (!pool) {
+    throw new Error("DATABASE_URL wajib diatur. Backend hanya mendukung Supabase PostgreSQL.");
+  }
+  await muatSupabase();
 }
 
 export const ambilDb = () => db;
@@ -130,8 +124,7 @@ export function idBerikutnya(tabel) {
 }
 
 export function simpan() {
-  if (!pool) {
-    simpanFile();
+  if (modeUji) {
     return Promise.resolve();
   }
 

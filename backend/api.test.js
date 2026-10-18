@@ -1,18 +1,15 @@
 // Uji otomatis API. Jalankan dengan:  npm test
-// Server dijalankan sungguhan dengan file data sementara, jadi data asli tidak tersentuh.
+// Server dijalankan sungguhan dengan data memori terisolasi, jadi database asli tidak tersentuh.
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PORT = 5599;
 const BASE = `http://localhost:${PORT}/api`;
 const DIR = path.dirname(fileURLToPath(import.meta.url));
-const FILE = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "aksara-")), "uji.json");
 let proses;
 
 async function api(metode, alamat, body) {
@@ -27,7 +24,7 @@ async function api(metode, alamat, body) {
 before(async () => {
   proses = spawn(process.execPath, ["server.js"], {
     cwd: DIR,
-    env: { ...process.env, PORT: String(PORT), DATA_FILE: FILE, PUBLIC_DIR: "/tidak-ada" },
+    env: { ...process.env, PORT: String(PORT), TEST_MODE: "memory", PUBLIC_DIR: "/tidak-ada" },
     stdio: "ignore",
   });
   for (let i = 0; i < 50; i++) {
@@ -189,10 +186,7 @@ test("PEMINJAMAN: denda dihitung Rp1.000 per hari terlambat", async () => {
   assert.equal(selesai.data.denda, target.hari_terlambat * 1000);
 });
 
-test("data tersimpan ke file dan galat umum ditangani", async () => {
-  const isi = JSON.parse(fs.readFileSync(FILE, "utf8"));
-  assert.ok(isi.buku.length > 0 && isi.peminjaman.length > 0);
-
+test("galat rute, metode, dan JSON tidak valid ditangani", async () => {
   assert.equal((await api("GET", "/tidak-ada")).status, 404);
   assert.equal((await api("PATCH", "/buku")).status, 405);
   const rusak = await fetch(`${BASE}/buku`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{rusak" });

@@ -24,13 +24,14 @@
 //   GET    /api/kategori               daftar kategori buku
 //   GET    /api/health                 cek server hidup
 
+import "dotenv/config";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Galat } from "./util.js";
 import * as s from "./service.js";
-import { FILE_DATA, initStore } from "./store.js";
+import { initStore } from "./store.js";
 
 const PORT = Number(process.env.PORT) || 5000;
 const DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -84,6 +85,18 @@ daftar("DELETE", "/api/peminjaman/:id", async ({ params }) => {
 
 // ----------------------------------------------------------------- bantu
 function bacaBody(req) {
+  if (req.body !== undefined) {
+    if (typeof req.body === "string") {
+      try {
+        return Promise.resolve(JSON.parse(req.body));
+      } catch {
+        return Promise.reject(new Galat(400, "Format JSON tidak valid."));
+      }
+    }
+    if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
+    return Promise.resolve({});
+  }
+
   return new Promise((resolve, reject) => {
     const potongan = [];
     let ukuran = 0;
@@ -145,7 +158,7 @@ function sajikanFile(req, res, pathname) {
 }
 
 // ---------------------------------------------------------------- server
-const server = http.createServer(async (req, res) => {
+export async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -189,10 +202,13 @@ const server = http.createServer(async (req, res) => {
     console.error(err);
     kirimJson(res, 500, { error: "Terjadi kesalahan pada server." });
   }
-});
+}
 
 await initStore();
-server.listen(PORT, () => {
-  console.log(`Perpustakaan Aksara: API berjalan di http://localhost:${PORT}/api`);
-  console.log(process.env.DATABASE_URL ? "Penyimpanan: Supabase PostgreSQL" : `File data: ${FILE_DATA}`);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const server = http.createServer(handler);
+  server.listen(PORT, () => {
+    console.log(`Perpustakaan Aksara: API berjalan di http://localhost:${PORT}/api`);
+    console.log("Penyimpanan: Supabase PostgreSQL");
+  });
+}

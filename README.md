@@ -6,9 +6,8 @@ Aplikasi web peminjaman buku perpustakaan untuk tugas mata kuliah Cloud Computin
 |---|---|
 | Frontend | React.js + Vite |
 | Backend | Node.js (REST API) |
-| Penyimpanan lokal | File JSON (`backend/data/perpustakaan.json`, dibuat otomatis) |
-| Penyimpanan production | Supabase PostgreSQL |
-| Deploy | Docker + Render |
+| Penyimpanan | Supabase PostgreSQL (wajib; tidak ada penyimpanan lokal) |
+| Deploy | Backend dan frontend dapat di-deploy terpisah di Vercel |
 
 ## Fitur
 
@@ -36,7 +35,8 @@ perpustakaan/
 ├── backend/
 │   ├── server.js        # server HTTP dan daftar rute API
 │   ├── service.js       # aturan perpustakaan dan logika CRUD
-│   ├── store.js         # file JSON lokal atau Supabase PostgreSQL
+│   ├── store.js         # koneksi Supabase PostgreSQL
+│   ├── api/             # entry point serverless untuk Vercel
 │   ├── schema.sql       # skema database Supabase
 │   ├── seed.js          # data awal (17 buku, 8 anggota, 9 peminjaman)
 │   ├── util.js          # bantu tanggal dan error
@@ -55,9 +55,24 @@ perpustakaan/
 └── docker-compose.yml
 ```
 
+## Menyiapkan Supabase
+
+1. Buat project di [Supabase](https://supabase.com/).
+2. Buka **SQL Editor → New query**, salin seluruh isi `backend/schema.sql`, lalu pilih **Run**.
+3. Buka **Project Settings → Database → Connect** dan salin connection string **Transaction pooler** (URI). Ganti password placeholder dengan password database project. Jangan masukkan URI ini ke Git atau frontend.
+4. Di **Project Settings → Database → SSL Configuration**, unduh root certificate database. Encode isi file sertifikat menjadi Base64 satu baris. Di PowerShell:
+   ```powershell
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes(".\prod-ca-2021.crt"))
+   ```
+   Pakai hasilnya untuk `SUPABASE_CA_CERT_BASE64`. Backend memverifikasi sertifikat TLS Supabase dan tidak menonaktifkan verifikasi.
+5. Atur `DATABASE_URL` dan `SUPABASE_CA_CERT_BASE64` sebagai environment variables backend. Keduanya tidak boleh dimasukkan ke frontend atau repository.
+
+Saat backend pertama kali terhubung ke tabel yang masih kosong, data contoh akan dibuat otomatis.
+Jika password database berisi karakter khusus, URL-encode karakter tersebut sebelum dimasukkan ke connection string.
+
 ## Menjalankan di komputer (Git Bash)
 
-Syaratnya Node.js 18 atau lebih baru. Backend dan frontend dijalankan di **dua jendela Git Bash terpisah**. Pastikan `ls` di folder `perpustakaan` menampilkan `backend` dan `frontend`.
+Syaratnya Node.js 18 atau lebih baru dan project Supabase yang sudah disiapkan. Backend dan frontend dijalankan di **dua jendela Git Bash terpisah**. Jalankan dari root proyek.
 
 **Jendela 1: backend**
 
@@ -67,7 +82,9 @@ npm install
 npm run dev
 ```
 
-Tunggu sampai muncul `API berjalan di http://localhost:5000/api`. Biarkan jendela ini terbuka. Cek dengan membuka http://localhost:5000/api/buku di browser, harusnya muncul data JSON.
+Sebelum menjalankan, salin `backend/.env.example` menjadi `backend/.env`, lalu isi `DATABASE_URL` dengan connection string Supabase dan `SUPABASE_CA_CERT_BASE64` dengan hasil Base64 sertifikat tadi. Backend memuat file `.env` otomatis.
+
+Tunggu sampai muncul `API berjalan di http://localhost:5000/api`. Biarkan jendela ini terbuka. Cek `http://localhost:5000/api/health`; responsnya harus memuat `{"status":"ok"}`.
 
 **Jendela 2: frontend**
 
@@ -77,9 +94,11 @@ npm install
 npm run dev
 ```
 
+Vite membaca `frontend/.env` secara otomatis. Untuk lokal, gunakan `VITE_API_URL=/api`; proxy Vite akan meneruskan request ke backend di port 5000.
+
 Buka http://localhost:5173.
 
-Kalau ingin mengulang dari data awal, hentikan backend dengan `Ctrl + C`, hapus folder `backend/data`, lalu jalankan lagi.
+Frontend lokal menggunakan proxy Vite ke backend di port 5000.
 
 ## Uji otomatis backend
 
@@ -88,7 +107,7 @@ cd backend
 npm test
 ```
 
-Uji ini menjalankan server sungguhan dengan file data sementara dan memeriksa CRUD buku, anggota, peminjaman, stok, batas pinjam, denda, dan validasi. Data asli tidak tersentuh.
+Uji ini menjalankan server sungguhan dengan data memori sementara dan memeriksa CRUD buku, anggota, peminjaman, stok, batas pinjam, denda, dan validasi. Uji tidak memerlukan koneksi Supabase dan tidak menyentuh data database.
 
 ## Endpoint API
 
@@ -134,49 +153,53 @@ Contoh body `POST /api/peminjaman`:
 
 Kategori yang valid: Fiksi, Pengembangan Diri, Sejarah, Sains & Teknologi, Anak & Remaja, Referensi.
 
+## Deploy backend dan frontend di Vercel
+
+Deploy sebagai **dua project Vercel** dari repository yang sama agar backend dan frontend memiliki URL masing-masing.
+
+### 1. Deploy backend
+
+1. Di Vercel, pilih **Add New → Project**, impor repository GitHub.
+2. Atur **Root Directory** ke `backend`. Vercel akan mengenali function `api/[...path].js`.
+3. Pada **Settings → Environment Variables**, tambahkan:
+   - `DATABASE_URL`: connection string **Transaction pooler** dari Supabase.
+   - `SUPABASE_CA_CERT_BASE64`: sertifikat root Supabase dalam Base64 satu baris.
+   - `TZ`: `Asia/Jakarta` (opsional).
+4. Deploy, lalu verifikasi `https://<nama-backend>.vercel.app/api/health` memberikan `{"status":"ok"}`.
+
+### 2. Deploy frontend
+
+1. Tambahkan project Vercel lain yang memakai repository yang sama.
+2. Atur **Root Directory** ke `frontend`; framework **Vite** dan build command `npm run build` (output directory `dist`).
+3. URL backend production sudah diatur di `frontend/.env.production`, yang dibaca Vite saat build dan ikut terdeploy bersama frontend. Jika URL backend berubah, perbarui file itu atau set `VITE_API_URL` pada **Settings → Environment Variables** di project frontend.
+4. Deploy atau redeploy frontend.
+
+`DATABASE_URL` adalah rahasia backend dan **tidak boleh** diberi awalan `VITE_`. Hanya URL backend publik yang dimasukkan ke `VITE_API_URL`.
+
+**Catatan keamanan dan skala:** API saat ini belum memiliki autentikasi, jadi siapa pun yang dapat menjangkau URL backend dapat mengubah data. Backend juga memuat seluruh tabel ke memori proses dan menulis ulang snapshot saat ada perubahan; Vercel serverless cocok untuk demo/penggunaan ringan, bukan beban multi-user atau data sensitif.
+
 ## Menjalankan dengan Docker
 
+Docker tetap dapat dipakai untuk menjalankan backend dan frontend dalam satu container. Pastikan `DATABASE_URL` tersedia saat container dijalankan:
 ```bash
-docker compose up --build
+DATABASE_URL='postgresql://...' docker compose up --build
 ```
 
-Buka http://localhost:8080. Satu container menjalankan backend sekaligus menyajikan frontend hasil build, dan data disimpan di Docker volume `data-perpustakaan` sehingga tidak hilang saat container dibuat ulang.
+Pada PowerShell, atur `$env:DATABASE_URL='postgresql://...'` sebelum `docker compose up --build`. Buka http://localhost:8080.
 
-## Deploy fullstack dengan Supabase dan Render
+## Alternatif: deploy fullstack dengan Supabase dan Render
 
-Frontend dan REST API di-deploy sebagai satu layanan Docker di Render. Data production disimpan di Supabase PostgreSQL; file JSON tetap dipakai untuk development lokal.
-
-### 1. Siapkan database Supabase
-
-1. Buat project di [Supabase](https://supabase.com/).
-2. Buka **SQL Editor → New query**, salin seluruh isi `backend/schema.sql`, lalu pilih **Run**. Ini membuat tabel, indeks unik, dan mengaktifkan Row Level Security tanpa membuka akses tabel ke publik.
-3. Buka **Project Settings → Database → Connection string**. Pilih **Session pooler** dan format **URI**. Salin connection string tersebut; gunakan password database project yang benar dan jangan masukkan connection string ke Git.
-
-Backend terhubung langsung ke PostgreSQL melalui `DATABASE_URL`; kunci `anon` maupun `service_role` Supabase tidak diperlukan.
-
-### 2. Deploy aplikasi ke Render
-
-1. Push folder proyek ini ke repository GitHub.
-2. Di Render, pilih **New → Blueprint**, hubungkan repository, dan pilih folder `perpustakaan` sebagai root jika repository berisi folder lain.
-3. Render membaca konfigurasi dari `render.yaml`. Saat diminta, masukkan connection string Supabase sebagai nilai rahasia `DATABASE_URL`, lalu deploy.
-4. Tunggu health check `/api/health` berhasil. Buka URL `.onrender.com` yang diberikan Render; frontend dan API berjalan di domain yang sama.
-
-`DATABASE_URL` hanya digunakan di backend. Jangan mengawali variabel frontend dengan `VITE_` atau menaruh password database di konfigurasi frontend. Saat pertama kali backend berjalan dengan skema kosong, data contoh dibuat otomatis. Untuk deployment ini gunakan satu instance backend; penyimpanan cache aplikasi saat ini mengasumsikan satu instance.
+Backend dapat dijalankan sebagai layanan web Render jika ingin menghindari batasan runtime serverless. Gunakan `render.yaml`, atur rahasia `DATABASE_URL` ke connection string Supabase, lalu deploy.
 
 ### Variabel lingkungan
 
 | Variabel | Fungsi | Bawaan |
 |---|---|---|
 | `PORT` | Port server | 5000 |
-| `DATABASE_URL` | Connection string PostgreSQL Supabase; jika diatur, database ini dipakai alih-alih JSON | tidak diatur |
-| `DATA_FILE` | Lokasi file data saat mode lokal | `backend/data/perpustakaan.json` |
-| `PUBLIC_DIR` | Folder hasil build frontend | `backend/public` |
+| `DATABASE_URL` | Connection string PostgreSQL Supabase; wajib untuk backend | wajib |
+| `PUBLIC_DIR` | Folder hasil build frontend untuk mode Docker | `backend/public` |
 | `TZ` | Zona waktu untuk hitungan jatuh tempo | zona server (Docker: Asia/Jakarta) |
-
-### Development lokal
-
-Tanpa `DATABASE_URL`, backend menggunakan file JSON seperti sebelumnya. Jika ingin menguji dengan database Supabase, atur `DATABASE_URL` di environment backend lokal menggunakan connection string private; jangan commit file `.env` atau membagikan nilainya.
 
 ## Catatan
 
-Mode lokal menyimpan satu file JSON agar mudah dijalankan tanpa database. Mode Supabase menggunakan tabel PostgreSQL dan transaksi saat menyimpan perubahan. Untuk deployment Render di panduan ini, jalankan satu instance backend.
+Backend menggunakan koneksi PostgreSQL langsung dan menyimpan data di Supabase. Aplikasi memuat data tabel ke memori proses, sehingga backend Vercel cocok untuk demo atau penggunaan ringan; instance serverless yang berjalan bersamaan dapat memiliki salinan memori berbeda. Untuk beban multi-user/produksi, gunakan layanan backend persisten satu instance atau ubah operasi penyimpanan agar setiap permintaan bekerja langsung dengan database.

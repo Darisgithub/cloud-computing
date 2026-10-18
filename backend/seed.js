@@ -1,4 +1,4 @@
-// Data awal. Dipakai hanya saat file data belum ada (pertama kali server dijalankan).
+// Data awal. Dipakai saat database Supabase belum diinisialisasi atau dalam pengujian.
 // Tanggal peminjaman dibuat relatif terhadap hari ini supaya contoh
 // "sedang dipinjam", "terlambat", dan "sudah kembali" selalu ada.
 

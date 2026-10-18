@@ -3,10 +3,8 @@ services:
     build: .
     container_name: perpustakaan-aksara
     restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the Supabase connection string}
+      TZ: Asia/Jakarta
     ports:
       - "8080:5000"
-    volumes:
-      - data-perpustakaan:/data   # supaya data tidak hilang saat container dibuat ulang
-
-volumes:
-  data-perpustakaan:

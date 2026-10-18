@@ -11,13 +11,11 @@ FROM node:20-alpine
 RUN apk add --no-cache tzdata
 ENV NODE_ENV=production \
     PORT=5000 \
-    TZ=Asia/Jakarta \
-    DATA_FILE=/data/perpustakaan.json
+    TZ=Asia/Jakarta
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci --omit=dev
 COPY backend/ ./
 COPY --from=build /app/frontend/dist ./public
-VOLUME /data
 EXPOSE 5000
 CMD ["node", "server.js"]

@@ -1,7 +1,7 @@
 // Semua komunikasi frontend dengan backend ada di file ini.
 // Saat development, Vite meneruskan "/api" ke backend (lihat vite.config.js).
-// Kalau backend ada di alamat lain, isi VITE_API_URL, contoh: https://api.contoh.com/api
-const BASE = import.meta.env.VITE_API_URL || "/api";
+// Untuk deploy terpisah, isi VITE_API_URL dengan URL backend yang berakhiran /api.
+const BASE = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
 
 async function kirim(metode, alamat, body) {
   let res;
@@ -12,7 +12,7 @@ async function kirim(metode, alamat, body) {
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new Error("Server tidak terjangkau. Pastikan backend sudah berjalan di port 5000.");
+    throw new Error("Server tidak terjangkau. Periksa koneksi ke backend.");
   }
 
   const data = await res.json().catch(() => ({}));

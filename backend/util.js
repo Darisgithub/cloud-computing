@@ -1,5 +1,5 @@
 // Fungsi bantu: error HTTP dan perhitungan tanggal.
-// Tanggal disimpan sebagai teks "YYYY-MM-DD" supaya mudah dibaca di file data.
+// Tanggal disimpan dalam format ISO "YYYY-MM-DD" agar konsisten di database dan API.
 
 export class Galat extends Error {
   constructor(status, pesan, field) {
